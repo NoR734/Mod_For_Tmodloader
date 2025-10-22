@@ -9,6 +9,10 @@ namespace Hidingeffects.Common.Systems
 	public sealed class TeammateEffectsFilterSystem : ModSystem
 	{
 		private static int _suppressNestingDepth;
+		
+		// Store gore hook delegates so we can unsubscribe without referencing orig_* types
+		private On_Gore.hook_NewGore _goreNewGoreHandler;
+		private On_Gore.hook_NewGoreDirect _goreNewGoreDirectHandler;
 
 		private static bool ShouldSuppress => _suppressNestingDepth > 0 && Main.netMode != 2; // never on server
 
@@ -27,9 +31,24 @@ namespace Hidingeffects.Common.Systems
 			On_Dust.NewDustDirect += On_Dust_NewDustDirect;
 			On_Dust.NewDustPerfect += On_Dust_NewDustPerfect;
 
-			// Intercept gore spawns
-			On_Gore.NewGore += On_Gore_NewGore;
-			On_Gore.NewGoreDirect += On_Gore_NewGoreDirect;
+			// Intercept gore spawns (use lambdas to avoid version-specific orig_* types)
+			_goreNewGoreHandler = (orig, source, position, velocity, type, scale) => {
+				int idx = orig(source, position, velocity, type, scale);
+				if (ShouldSuppress && idx >= 0 && idx < Main.maxGore) {
+					Main.gore[idx].active = false;
+				}
+				return idx;
+			};
+			On_Gore.NewGore += _goreNewGoreHandler;
+
+			_goreNewGoreDirectHandler = (orig, source, position, velocity, type, scale) => {
+				Gore g = orig(source, position, velocity, type, scale);
+				if (ShouldSuppress && g != null) {
+					g.active = false;
+				}
+				return g;
+			};
+			On_Gore.NewGoreDirect += _goreNewGoreDirectHandler;
 		}
 
 		public override void Unload() {
@@ -46,8 +65,10 @@ namespace Hidingeffects.Common.Systems
 			On_Dust.NewDustDirect -= On_Dust_NewDustDirect;
 			On_Dust.NewDustPerfect -= On_Dust_NewDustPerfect;
 
-			On_Gore.NewGore -= On_Gore_NewGore;
-			On_Gore.NewGoreDirect -= On_Gore_NewGoreDirect;
+			if (_goreNewGoreHandler != null)
+				On_Gore.NewGore -= _goreNewGoreHandler;
+			if (_goreNewGoreDirectHandler != null)
+				On_Gore.NewGoreDirect -= _goreNewGoreDirectHandler;
 		}
 
 		private static bool IsTeammatePlayer(int playerIndex) {
@@ -163,23 +184,6 @@ namespace Hidingeffects.Common.Systems
 			return d;
 		}
 
-		// Gore creation interceptors
-		private int On_Gore_NewGore(On_Gore.orig_NewGore orig,
-			IEntitySource source, Vector2 position, Vector2 velocity, int type, float scale) {
-			int idx = orig(source, position, velocity, type, scale);
-			if (ShouldSuppress && idx >= 0 && idx < Main.maxGore) {
-				Main.gore[idx].active = false;
-			}
-			return idx;
-		}
-
-		private Gore On_Gore_NewGoreDirect(On_Gore.orig_NewGoreDirect orig,
-			IEntitySource source, Vector2 position, Vector2 velocity, int type, float scale) {
-			Gore g = orig(source, position, velocity, type, scale);
-			if (ShouldSuppress && g != null) {
-				g.active = false;
-			}
-			return g;
-		}
+		// Gore creation interceptors are attached in Load via stored delegates
 	}
 }
