@@ -29,8 +29,8 @@ namespace Hidingeffects.Common.Systems
 			On_Dust.NewDustPerfect += On_Dust_NewDustPerfect;
 
 			// Intercept gore spawns
-			On_Gore.NewGore += On_Gore_NewGore;
-			On_Gore.NewGoreDirect += On_Gore_NewGoreDirect;
+			On_Gore.NewGore_IEntitySource_Vector2_Vector2_int_float += On_Gore_NewGore;
+			On_Gore.NewGoreDirect_IEntitySource_Vector2_Vector2_int_float += On_Gore_NewGoreDirect;
 		}
 
 		public override void Unload() {
@@ -47,8 +47,8 @@ namespace Hidingeffects.Common.Systems
 			On_Dust.NewDustDirect -= On_Dust_NewDustDirect;
 			On_Dust.NewDustPerfect -= On_Dust_NewDustPerfect;
 
-			On_Gore.NewGore -= On_Gore_NewGore;
-			On_Gore.NewGoreDirect -= On_Gore_NewGoreDirect;
+			On_Gore.NewGore_IEntitySource_Vector2_Vector2_int_float -= On_Gore_NewGore;
+			On_Gore.NewGoreDirect_IEntitySource_Vector2_Vector2_int_float -= On_Gore_NewGoreDirect;
 		}
 
 		private static bool IsTeammatePlayer(int playerIndex) {
@@ -156,7 +156,7 @@ namespace Hidingeffects.Common.Systems
 		}
 
 		private Dust On_Dust_NewDustPerfect(On_Dust.orig_NewDustPerfect orig,
-			Vector2 position, int type, Vector2? speed, int alpha, Microsoft.Xna.Framework.Color? newColor, float scale) {
+			Vector2 position, int type, Vector2? speed, int alpha, Microsoft.Xna.Framework.Color newColor, float scale) {
 			Dust d = orig(position, type, speed, alpha, newColor, scale);
 			if (ShouldSuppress && d != null) {
 				d.active = false;
@@ -165,7 +165,7 @@ namespace Hidingeffects.Common.Systems
 		}
 
 		// Gore creation interceptors
-		private int On_Gore_NewGore(On_Gore.orig_NewGore orig,
+		private int On_Gore_NewGore(On_Gore.orig_NewGore_IEntitySource_Vector2_Vector2_int_float orig,
 			IEntitySource source, Vector2 position, Vector2 velocity, int type, float scale) {
 			int idx = orig(source, position, velocity, type, scale);
 			if (ShouldSuppress && idx >= 0 && idx < Main.maxGore) {
@@ -174,7 +174,7 @@ namespace Hidingeffects.Common.Systems
 			return idx;
 		}
 
-		private Gore On_Gore_NewGoreDirect(On_Gore.orig_NewGoreDirect orig,
+		private Gore On_Gore_NewGoreDirect(On_Gore.orig_NewGoreDirect_IEntitySource_Vector2_Vector2_int_float orig,
 			IEntitySource source, Vector2 position, Vector2 velocity, int type, float scale) {
 			Gore g = orig(source, position, velocity, type, scale);
 			if (ShouldSuppress && g != null) {
